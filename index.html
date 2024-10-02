@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zigbee Firmware Flashing Tool</title>
-    <link rel="stylesheet" href="styles/style.css"> <!-- Link to CSS if needed -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,90 +15,130 @@
         h1 {
             color: #007BFF;
         }
-        .dongle-option {
-            background: #fff;
-            margin: 10px 0;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-        .dongle-option label {
-            display: block;
-            margin-bottom: 10px;
-        }
-        .dongle-option select {
+        select, button, input {
             padding: 10px;
-            border: 1px solid #ccc;
+            margin-top: 10px;
             border-radius: 5px;
+            border: 1px solid #007BFF;
+            cursor: pointer;
+            width: 300px;
         }
-        .submit-btn {
-            margin-top: 15px;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
+        button {
             background-color: #007BFF;
             color: white;
-            cursor: pointer;
+            border: none;
+            width: auto;
         }
-        .submit-btn:hover {
+        button:hover {
             background-color: #0056b3;
+        }
+        #command-output {
+            margin-top: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
 <body>
     <h1>Zigbee Firmware Flashing Tool</h1>
-    <p>Choose the Zigbee dongle you want to flash:</p>
+    
+    <label for="dongle-select">Choose a Dongle:</label>
+    <select id="dongle-select">
+        <option value="sonoff_dongle_p">Sonoff Dongle P</option>
+        <option value="sonoff_dongle_e">Sonoff Dongle E</option>
+        <option value="smlight_slzb_07">SMLight SLZB-07</option>
+        <option value="smlight_slzb_07p7">SMLight SLZB-07P7</option>
+    </select>
 
-    <form id="flashForm" action="" method="get">
-        <div class="dongle-option">
-            <label for="dongle">Select a Dongle:</label>
-            <select id="dongle" name="dongle">
-                <option value="sonoff_dongle_p">Sonoff Dongle P</option>
-                <option value="sonoff_dongle_e">Sonoff Dongle E</option>
-                <option value="slzb_07">SMLight SLZB-07</option>
-                <option value="slzb_07p7">SMLight SLZB-07P7</option>
-            </select>
-        </div>
+    <label for="mode-select">Flash as:</label>
+    <select id="mode-select">
+        <option value="coordinator">Coordinator</option>
+        <option value="router">Router</option>
+    </select>
 
-        <div class="dongle-option">
-            <label for="mode">Flash As:</label>
-            <select id="mode" name="mode">
-                <option value="coordinator">Coordinator</option>
-                <option value="router">Router</option>
-            </select>
-        </div>
+    <label for="serial-port">Select Serial Port:</label>
+    <input type="text" id="serial-port" placeholder="e.g., /dev/ttyUSB0 or COM3">
+    <button id="detect-button">Detect Serial Ports</button>
 
-        <button type="submit" class="submit-btn">Flash Firmware</button>
-    </form>
-
-    <footer>
-        <p>&copy; 2024 Zigbee Firmware Flashing Tool. All rights reserved.</p>
-    </footer>
+    <button id="flash-button">Flash Firmware</button>
+    
+    <div id="command-output"></div>
 
     <script>
-        document.getElementById('flashForm').onsubmit = function(event) {
-            event.preventDefault(); // Prevent the default form submission
+        const serialPortInput = document.getElementById('serial-port');
 
-            // Get selected values
-            const dongle = document.getElementById('dongle').value;
-            const mode = document.getElementById('mode').value;
+        document.getElementById('detect-button').addEventListener('click', async () => {
+            if ('serial' in navigator) {
+                try {
+                    const port = await navigator.serial.requestPort();
+                    serialPortInput.value = port.getInfo().usbVendorId + "-" + port.getInfo().usbProductId; // Show vendor and product ID
+                } catch (err) {
+                    console.error('Error selecting port: ', err);
+                }
+            } else {
+                alert('Web Serial API not supported in this browser.');
+            }
+        });
 
-            // Determine the firmware file based on the selected dongle and mode
-            let firmwareFile;
+        document.getElementById('flash-button').addEventListener('click', () => {
+            const dongle = document.getElementById('dongle-select').value;
+            const mode = document.getElementById('mode-select').value;
+            const serialPort = serialPortInput.value.trim(); // Get the serial port input
+
+            let command = "";
+            let baseCommand = "";
+
+            // Determine the command based on the dongle and mode selected
             if (dongle === "sonoff_dongle_p") {
-                firmwareFile = mode === "coordinator" ? "zb_firmware/sonoff_dongle_p_coordinator.bin" : "zb_firmware/sonoff_dongle_p_router.bin";
+                baseCommand = "sudo python3 /zb_firmware/base1.py -ewv -p " + serialPort + " --bootloader-sonoff-usb ";
+                if (mode === "coordinator") {
+                    command = baseCommand + "/zb_firmware/sonoff_dongle_p/coordinator/CC1352P2_CC2652P_launchpad_coordinator_20230507.hex";
+                } else if (mode === "router") {
+                    command = baseCommand + "/zb_firmware/sonoff_dongle_p/router/CC1352P2_CC2652P_launchpad_router_20221102.hex";
+                }
             } else if (dongle === "sonoff_dongle_e") {
-                firmwareFile = mode === "coordinator" ? "zb_firmware/sonoff_dongle_e_coordinator.bin" : "zb_firmware/sonoff_dongle_e_router.bin";
-            } else if (dongle === "slzb_07") {
-                firmwareFile = mode === "coordinator" ? "zb_firmware/slzb_07_coordinator.bin" : "zb_firmware/slzb_07_router.bin";
-            } else if (dongle === "slzb_07p7") {
-                firmwareFile = mode === "coordinator" ? "zb_firmware/slzb_07p7_coordinator.bin" : "zb_firmware/slzb_07p7_router.bin";
+                baseCommand = "sudo python3 /zb_firmware/base2.py flash -f ";
+                if (mode === "coordinator") {
+                    command = baseCommand + "/zb_firmware/sonoff_dongle_e/coordinator/ncp-uart-hw-v7.4.1.0-zbdonglee-115200.gbl -p " + serialPort;
+                } else if (mode === "router") {
+                    command = baseCommand + "/zb_firmware/sonoff_dongle_e/router/router.gbl -p " + serialPort;
+                }
+            } else if (dongle === "smlight_slzb_07") {
+                baseCommand = "sudo python3 /zb_firmware/base2.py flash -f ";
+                if (mode === "coordinator") {
+                    command = baseCommand + "/zb_firmware/slzb_07/coordinator/ncp-uart-hw-v7.4.1.0-slzb-07-115200.gbl -p " + serialPort;
+                } else if (mode === "router") {
+                    command = "No Option Available"; // Set the command to indicate no available option
+                }
+            } else if (dongle === "smlight_slzb_07p7") {
+                baseCommand = "sudo python3 /zb_firmware/base1.py -ewv -p " + serialPort + " --bootloader-sonoff-usb ";
+                if (mode === "coordinator") {
+                    command = baseCommand + "/zb_firmware/slzb_07p7/coordinator/CC1352P2_CC2652P_launchpad_coordinator_20230507.hex";
+                } else if (mode === "router") {
+                    command = baseCommand + "/zb_firmware/slzb_07p7/router/CC1352P2_CC2652P_launchpad_router_20221102.hex";
+                }
             }
 
-            // Redirect to the selected firmware file
-            window.location.href = firmwareFile;
-        };
+            // Determine the operating system
+            const isWindows = navigator.userAgent.indexOf("Windows") !== -1;
+
+            // If running on Windows, adjust the command accordingly
+            if (isWindows) {
+                baseCommand = baseCommand.replace("python3 ", "python "); // Replace python3 with python
+            }
+
+            // Display the command to the user
+            const outputDiv = document.getElementById('command-output');
+            if (command && command !== "No Option Available") {
+                outputDiv.textContent = "Run this command: \n" + command; // Show the generated command
+            } else {
+                // Prompt if there is no option available
+                alert("No flashing option available for the selected dongle and mode.");
+                outputDiv.textContent = ""; // Clear the output
+            }
+        });
     </script>
 </body>
 </html>
