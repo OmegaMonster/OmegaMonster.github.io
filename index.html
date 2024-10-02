@@ -98,24 +98,39 @@
 
             // Form command based on dongle and mode
             if (dongle === "sonoff_dongle_p") {
-                baseCommand = "sudo python3 /zb_firmware/base1.py -ewv -p " + serialPort + " --bootloader-sonoff-usb ";
+                baseCommand = "sudo python3 https://raw.githubusercontent.com/OmegaMonster/OmegaMonster.github.io/main/zb_firmware/base1.py -ewv -p " + serialPort + " --bootloader-sonoff-usb ";
                 if (mode === "coordinator") {
-                    firmwarePath = "/zb_firmware/sonoff_dongle_p/coordinator/CC1352P2_CC2652P_launchpad_coordinator_20230507.hex";
+                    firmwarePath = "https://raw.githubusercontent.com/OmegaMonster/OmegaMonster.github.io/main/zb_firmware/sonoff_dongle_p/coordinator/CC1352P2_CC2652P_launchpad_coordinator_20230507.hex";
                 } else if (mode === "router") {
-                    firmwarePath = "/zb_firmware/sonoff_dongle_p/router/CC1352P2_CC2652P_launchpad_router_20221102.hex";
+                    firmwarePath = "https://raw.githubusercontent.com/OmegaMonster/OmegaMonster.github.io/main/zb_firmware/sonoff_dongle_p/router/CC1352P2_CC2652P_launchpad_router_20221102.hex";
                 }
             } else if (dongle === "sonoff_dongle_e") {
-                baseCommand = "sudo python3 /zb_firmware/base2.py flash -f ";
+                baseCommand = "sudo python3 https://raw.githubusercontent.com/OmegaMonster/OmegaMonster.github.io/main/zb_firmware/base2.py flash -f ";
                 if (mode === "coordinator") {
-                    firmwarePath = "/zb_firmware/sonoff_dongle_e/coordinator/ncp-uart-hw-v7.4.1.0-zbdonglee-115200.gbl";
+                    firmwarePath = "https://raw.githubusercontent.com/OmegaMonster/OmegaMonster.github.io/main/zb_firmware/sonoff_dongle_e/coordinator/ncp-uart-hw-v7.4.1.0-zbdonglee-115200.gbl -p " + serialPort;
                 } else if (mode === "router") {
-                    firmwarePath = "/zb_firmware/sonoff_dongle_e/router/router.gbl";
+                    firmwarePath = "https://raw.githubusercontent.com/OmegaMonster/OmegaMonster.github.io/main/zb_firmware/sonoff_dongle_e/router/router.gbl -p " + serialPort;
+                }
+            } else if (dongle === "smlight_slzb_07") {
+                baseCommand = "sudo python3 https://raw.githubusercontent.com/OmegaMonster/OmegaMonster.github.io/main/zb_firmware/base2.py flash -f ";
+                if (mode === "coordinator") {
+                    firmwarePath = "https://raw.githubusercontent.com/OmegaMonster/OmegaMonster.github.io/main/zb_firmware/slzb_07/coordinator/ncp-uart-hw-v7.4.1.0-slzb-07-115200.gbl";
+                } else {
+                    commandOutputDiv.textContent = "No option available for this dongle and mode.";
+                    return;
+                }
+            } else if (dongle === "smlight_slzb_07p7") {
+                baseCommand = "sudo python3 https://raw.githubusercontent.com/OmegaMonster/OmegaMonster.github.io/main/zb_firmware/base1.py -ewv -p " + serialPort + " --bootloader-sonoff-usb ";
+                if (mode === "coordinator") {
+                    firmwarePath = "https://raw.githubusercontent.com/OmegaMonster/OmegaMonster.github.io/main/zb_firmware/slzb_07p7/coordinator/CC1352P2_CC2652P_launchpad_coordinator_20230507.hex";
+                } else if (mode === "router") {
+                    firmwarePath = "https://raw.githubusercontent.com/OmegaMonster/OmegaMonster.github.io/main/zb_firmware/slzb_07p7/router/CC1352P2_CC2652P_launchpad_router_20221102.hex";
                 }
             }
 
             // Output the command to be run
             const fullCommand = baseCommand + firmwarePath;
-            commandOutputDiv.textContent = "Running command: " + fullCommand;
+            commandOutputDiv.textContent = "Run this command in your terminal: " + fullCommand;
 
             // Attempt to send the firmware file over Web Serial
             try {
@@ -127,7 +142,7 @@
                     const writableStreamClosed = encoder.readable.pipeTo(port.writable);
                     const writer = encoder.writable.getWriter();
 
-                    // Send firmware file content here (adjust as needed)
+                    // Send firmware file URL (you'll need to implement the process for fetching and flashing the file)
                     await writer.write(firmwarePath);
                     await writer.close();
                     await writableStreamClosed;
