@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zigbee Firmware Flashing Tool</title>
+    <link rel="stylesheet" href="styles/style.css"> <!-- Link to CSS if needed -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,43 +16,90 @@
         h1 {
             color: #007BFF;
         }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        li {
+        .dongle-option {
             background: #fff;
             margin: 10px 0;
-            padding: 10px;
+            padding: 15px;
             border-radius: 5px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .dongle-option label {
+            display: block;
+            margin-bottom: 10px;
+        }
+        .dongle-option select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .submit-btn {
+            margin-top: 15px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+        }
+        .submit-btn:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
 <body>
     <h1>Zigbee Firmware Flashing Tool</h1>
-    <p>Welcome to the Zigbee Firmware Flashing Tool. This tool allows you to easily flash firmware onto your Zigbee devices.</p>
-    
-    <h2>Features:</h2>
-    <ul>
-        <li>Flash coordinator or router firmware effortlessly.</li>
-        <li>Intuitive user interface for easy navigation.</li>
-        <li>Support for various Zigbee device models.</li>
-        <li>Real-time status updates during the flashing process.</li>
-        <li>Secure and reliable flashing procedures.</li>
-    </ul>
+    <p>Choose the Zigbee dongle you want to flash:</p>
 
-    <h2>Instructions:</h2>
-    <p>To use the Zigbee Firmware Flashing Tool, follow these steps:</p>
-    <ol>
-        <li>Connect your Zigbee dongle to the computer.</li>
-        <li>Select the appropriate device model from the tool.</li>
-        <li>Choose the firmware version you wish to flash.</li>
-        <li>Click on the 'Flash' button and follow the prompts.</li>
-    </ol>
+    <form id="flashForm" action="" method="get">
+        <div class="dongle-option">
+            <label for="dongle">Select a Dongle:</label>
+            <select id="dongle" name="dongle">
+                <option value="sonoff_dongle_p">Sonoff Dongle P</option>
+                <option value="sonoff_dongle_e">Sonoff Dongle E</option>
+                <option value="slzb_07">SMLight SLZB-07</option>
+                <option value="slzb_07p7">SMLight SLZB-07P7</option>
+            </select>
+        </div>
+
+        <div class="dongle-option">
+            <label for="mode">Flash As:</label>
+            <select id="mode" name="mode">
+                <option value="coordinator">Coordinator</option>
+                <option value="router">Router</option>
+            </select>
+        </div>
+
+        <button type="submit" class="submit-btn">Flash Firmware</button>
+    </form>
 
     <footer>
         <p>&copy; 2024 Zigbee Firmware Flashing Tool. All rights reserved.</p>
     </footer>
+
+    <script>
+        document.getElementById('flashForm').onsubmit = function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            // Get selected values
+            const dongle = document.getElementById('dongle').value;
+            const mode = document.getElementById('mode').value;
+
+            // Determine the firmware file based on the selected dongle and mode
+            let firmwareFile;
+            if (dongle === "sonoff_dongle_p") {
+                firmwareFile = mode === "coordinator" ? "zb_firmware/sonoff_dongle_p_coordinator.bin" : "zb_firmware/sonoff_dongle_p_router.bin";
+            } else if (dongle === "sonoff_dongle_e") {
+                firmwareFile = mode === "coordinator" ? "zb_firmware/sonoff_dongle_e_coordinator.bin" : "zb_firmware/sonoff_dongle_e_router.bin";
+            } else if (dongle === "slzb_07") {
+                firmwareFile = mode === "coordinator" ? "zb_firmware/slzb_07_coordinator.bin" : "zb_firmware/slzb_07_router.bin";
+            } else if (dongle === "slzb_07p7") {
+                firmwareFile = mode === "coordinator" ? "zb_firmware/slzb_07p7_coordinator.bin" : "zb_firmware/slzb_07p7_router.bin";
+            }
+
+            // Redirect to the selected firmware file
+            window.location.href = firmwareFile;
+        };
+    </script>
 </body>
 </html>
