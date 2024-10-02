@@ -58,9 +58,9 @@
         <option value="router">Router</option>
     </select>
 
-    <label for="serial-port">Select Serial Port:</label>
-    <input type="text" id="serial-port" placeholder="e.g., /dev/ttyUSB0 or COM3">
-    <button id="detect-button">Detect Serial Ports</button>
+    <label for="serial-port">Serial Port (Auto-Detected):</label>
+    <input type="text" id="serial-port" placeholder="Auto-detect or manually enter serial port">
+    <button id="detect-button">Detect Serial Port</button>
 
     <button id="flash-button">Flash Firmware</button>
     
@@ -68,75 +68,77 @@
 
     <script>
         const serialPortInput = document.getElementById('serial-port');
+        const commandOutputDiv = document.getElementById('command-output');
 
+        // Auto-detect serial ports via Web Serial API
         document.getElementById('detect-button').addEventListener('click', async () => {
             if ('serial' in navigator) {
                 try {
-                    const port = await navigator.serial.requestPort();
-                    serialPortInput.value = port.getInfo().usbVendorId + "-" + port.getInfo().usbProductId; // Show vendor and product ID
+                    const port = await navigator.serial.requestPort(); // Prompts user to select a device
+                    const info = port.getInfo();
+                    serialPortInput.value = `USB Vendor ID: ${info.usbVendorId}, Product ID: ${info.usbProductId}`; // Show details in the input
+                    commandOutputDiv.textContent = 'Serial port detected: ' + serialPortInput.value;
                 } catch (err) {
-                    console.error('Error selecting port: ', err);
+                    console.error('Error selecting port:', err);
+                    commandOutputDiv.textContent = 'Failed to detect serial port.';
                 }
             } else {
-                alert('Web Serial API not supported in this browser.');
+                alert('Web Serial API is not supported in this browser. Please use Chrome or Edge.');
             }
         });
 
-        document.getElementById('flash-button').addEventListener('click', () => {
+        // Flash firmware when button is clicked
+        document.getElementById('flash-button').addEventListener('click', async () => {
             const dongle = document.getElementById('dongle-select').value;
             const mode = document.getElementById('mode-select').value;
-            const serialPort = serialPortInput.value.trim(); // Get the serial port input
+            const serialPort = serialPortInput.value.trim();
 
-            let command = "";
+            let firmwarePath = "";
             let baseCommand = "";
 
-            // Determine the command based on the dongle and mode selected
+            // Form command based on dongle and mode
             if (dongle === "sonoff_dongle_p") {
                 baseCommand = "sudo python3 /zb_firmware/base1.py -ewv -p " + serialPort + " --bootloader-sonoff-usb ";
                 if (mode === "coordinator") {
-                    command = baseCommand + "/zb_firmware/sonoff_dongle_p/coordinator/CC1352P2_CC2652P_launchpad_coordinator_20230507.hex";
+                    firmwarePath = "/zb_firmware/sonoff_dongle_p/coordinator/CC1352P2_CC2652P_launchpad_coordinator_20230507.hex";
                 } else if (mode === "router") {
-                    command = baseCommand + "/zb_firmware/sonoff_dongle_p/router/CC1352P2_CC2652P_launchpad_router_20221102.hex";
+                    firmwarePath = "/zb_firmware/sonoff_dongle_p/router/CC1352P2_CC2652P_launchpad_router_20221102.hex";
                 }
             } else if (dongle === "sonoff_dongle_e") {
                 baseCommand = "sudo python3 /zb_firmware/base2.py flash -f ";
                 if (mode === "coordinator") {
-                    command = baseCommand + "/zb_firmware/sonoff_dongle_e/coordinator/ncp-uart-hw-v7.4.1.0-zbdonglee-115200.gbl -p " + serialPort;
+                    firmwarePath = "/zb_firmware/sonoff_dongle_e/coordinator/ncp-uart-hw-v7.4.1.0-zbdonglee-115200.gbl";
                 } else if (mode === "router") {
-                    command = baseCommand + "/zb_firmware/sonoff_dongle_e/router/router.gbl -p " + serialPort;
-                }
-            } else if (dongle === "smlight_slzb_07") {
-                baseCommand = "sudo python3 /zb_firmware/base2.py flash -f ";
-                if (mode === "coordinator") {
-                    command = baseCommand + "/zb_firmware/slzb_07/coordinator/ncp-uart-hw-v7.4.1.0-slzb-07-115200.gbl -p " + serialPort;
-                } else if (mode === "router") {
-                    command = "No Option Available"; // Set the command to indicate no available option
-                }
-            } else if (dongle === "smlight_slzb_07p7") {
-                baseCommand = "sudo python3 /zb_firmware/base1.py -ewv -p " + serialPort + " --bootloader-sonoff-usb ";
-                if (mode === "coordinator") {
-                    command = baseCommand + "/zb_firmware/slzb_07p7/coordinator/CC1352P2_CC2652P_launchpad_coordinator_20230507.hex";
-                } else if (mode === "router") {
-                    command = baseCommand + "/zb_firmware/slzb_07p7/router/CC1352P2_CC2652P_launchpad_router_20221102.hex";
+                    firmwarePath = "/zb_firmware/sonoff_dongle_e/router/router.gbl";
                 }
             }
 
-            // Determine the operating system
-            const isWindows = navigator.userAgent.indexOf("Windows") !== -1;
+            // Output the command to be run
+            const fullCommand = baseCommand + firmwarePath;
+            commandOutputDiv.textContent = "Running command: " + fullCommand;
 
-            // If running on Windows, adjust the command accordingly
-            if (isWindows) {
-                baseCommand = baseCommand.replace("python3 ", "python "); // Replace python3 with python
-            }
+            // Attempt to send the firmware file over Web Serial
+            try {
+                if ('serial' in navigator) {
+                    const port = await navigator.serial.requestPort();
+                    await port.open({ baudRate: 115200 });
 
-            // Display the command to the user
-            const outputDiv = document.getElementById('command-output');
-            if (command && command !== "No Option Available") {
-                outputDiv.textContent = "Run this command: \n" + command; // Show the generated command
-            } else {
-                // Prompt if there is no option available
-                alert("No flashing option available for the selected dongle and mode.");
-                outputDiv.textContent = ""; // Clear the output
+                    const encoder = new TextEncoderStream();
+                    const writableStreamClosed = encoder.readable.pipeTo(port.writable);
+                    const writer = encoder.writable.getWriter();
+
+                    // Send firmware file content here (adjust as needed)
+                    await writer.write(firmwarePath);
+                    await writer.close();
+                    await writableStreamClosed;
+
+                    commandOutputDiv.textContent = "Flashing process started.";
+                } else {
+                    alert('Web Serial API is not supported in this browser.');
+                }
+            } catch (err) {
+                console.error('Error flashing firmware:', err);
+                commandOutputDiv.textContent = 'Error during flashing process.';
             }
         });
     </script>
